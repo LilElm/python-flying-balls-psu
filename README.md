@@ -1,4 +1,4 @@
-### python-flying-balls
+### python-flying-balls-psu
 <sub>
   A Python program to levitate superconducting spheres by ramping the currents of two concentric, superconducting coils connected to a PSU.
 
