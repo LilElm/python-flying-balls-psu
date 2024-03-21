@@ -41,12 +41,35 @@ class Channel():
 
 
 
+def psu_update(psu, channelDict):
+    # Evaluate the current current and current profile
+    for channel in channelDict:
+        try:
+            channelDict[channel].i_now = float(psu.query(f"ISET? {channelDict[channel].channel}"))
+            print(f"{channelDict[channel].channel}: {channelDict[channel].i_now} Amps")
+            
+            
+            
+            channelDict[channel].v_out = float(psu.query(f"VOUT? {channelDict[channel].channel}"))
+            print(f"{channelDict[channel].channel}: {channelDict[channel].v_out} Volts")
+            
+            
+            
+            
+            print(str(psu.query("ERR?")))
+        except:
+            print("err")
+
+
 def psu_currents(psu, channelDict, pipe_stopa, pipe_gui_innerb, pipe_gui_outerb):
     
     # Evaluate the current current and current profile
     for channel in channelDict:
-        channelDict[channel].i_now = float(psu.query(f"ISET? {channelDict[channel].channel}"))
-        print(f"{channelDict[channel].channel}: {channelDict[channel].i_now} Amps")
+        try:
+            channelDict[channel].i_now = float(psu.query(f"ISET? {channelDict[channel].channel}"))
+            print(f"{channelDict[channel].channel}: {channelDict[channel].i_now} Amps")
+        except:
+            print("err")
         
         
         channelDict[channel].done = False
@@ -98,14 +121,13 @@ def psu_currents(psu, channelDict, pipe_stopa, pipe_gui_innerb, pipe_gui_outerb)
                     if channelDict[channel].index <= channelDict[channel].profile_size - 1:
                         psu.write(f"ISET {channelDict[channel].channel},{channelDict[channel].profile[channelDict[channel].index]}")
                         try:
-                            channelDict[channel].i_now = float(psu.query(f"ISET? {channelDict[channel].channel}"))
+                            channelDict[channel].i_now = float(psu.query(f"ISET? {channelDict[channel].channel}")) 
                             t = time1 - time00
                             print(f"{t}: Channel {channel}: {channelDict[channel].i_now}")
                             channelDict[channel].pipeb.send([t, channelDict[channel].i_now])
                             channelDict[channel].time0 = channelDict[channel].time0 + channelDict[channel].dt
                             channelDict[channel].index = channelDict[channel].index + 1
                         except:
-                            print("err")
                             print(str(psu.query(f"ISET? {channelDict[channel].channel}")))
                     else:
                         channelDict[channel].done = True
@@ -190,6 +212,8 @@ def main():
     pipe_gui_outera, pipe_gui_outerb = Pipe(duplex=False)
     
     
+    pipe_updatea, pipe_updateb = Pipe(duplex=True)
+    
     #pipe_signala, pipe_signalb = Pipe(duplex=False) # Restarts
 
     
@@ -220,7 +244,7 @@ def main():
      
     # Start GUI
     processlist = []
-    proc0 = Process(target=start_gui, args=(outer_channelDict, inner_channelDict, pipe_paramb, pipe_stopb, pipe_gui_innera, pipe_gui_innerb, pipe_gui_outera, pipe_gui_outerb))
+    proc0 = Process(target=start_gui, args=(outer_channelDict, inner_channelDict, pipe_paramb, pipe_stopb, pipe_gui_innera, pipe_gui_innerb, pipe_gui_outera, pipe_gui_outerb, pipe_updateb))
     processlist.append(proc0)
     proc0.start()
     
@@ -249,8 +273,37 @@ def main():
          #   channelDict[channel].pipe_reset.send(True)
         
         
-        # Get input parameters from the GUI and evalute the force profile        
-        out_path, db_env, save, channelDict = get_parameters(pipe_parama, channelDict)
+        # Get input parameters from the GUI and evalute the force profile
+
+        while True:
+            if pipe_parama.poll():
+                out_path, db_env, save, channelDict = get_parameters(pipe_parama, channelDict)
+                
+                # Clear pipes
+                if pipe_stopa.poll():
+                    while pipe_stopa.poll():
+                        pipe_stopa.recv()
+                
+                psu_currents(psu, channelDict, pipe_stopa, pipe_gui_innerb, pipe_gui_outerb)
+                
+                
+                # Clear pipes
+                if pipe_stopa.poll():
+                    while pipe_stopa.poll():
+                        pipe_stopa.recv()
+                
+                if pipe_parama.poll():
+                    while pipe_parama.poll():
+                        pipe_parama.recv()
+                
+                break
+            
+            
+            elif pipe_updatea.poll():
+                while pipe_updatea.poll():
+                    pipe_updatea.recv()
+                psu_update(psu, channelDict)
+                break        
         
         
         
@@ -260,7 +313,6 @@ def main():
                 pipe_stopa.recv()
         
         
-        psu_currents(psu, channelDict, pipe_stopa, pipe_gui_innerb, pipe_gui_outerb)
         
         
         # Clear pipes

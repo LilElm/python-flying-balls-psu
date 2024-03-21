@@ -653,6 +653,7 @@ class Layout(QGridLayout):
                  pipe_gui_innerb,
                  pipe_gui_outera,
                  pipe_gui_outerb,
+                 pipe_update,
                  parent=None,
                  *args,
                  **kwargs):
@@ -679,6 +680,7 @@ class Layout(QGridLayout):
         self.pipe_gui_innerb = pipe_gui_innerb
         self.pipe_gui_outera = pipe_gui_outera
         self.pipe_gui_outerb = pipe_gui_outerb
+        self.pipe_update = pipe_update
         
         #self.pipe_outersignala, self.pipe_outersignalb = Pipe(duplex=False)
         #self.pipe_innersignala, self.pipe_innersignalb = Pipe(duplex=False)
@@ -735,11 +737,11 @@ class Layout(QGridLayout):
         #layout_buttons = ButtonLayout()
                 
         
-        self.addLayout(layout_fsettings, 0, 0, 1, 4)
+        self.addLayout(layout_fsettings, 0, 0, 1, 20)
         #self.addLayout(layout_outer_coils, 1, 0, 1, 1)
         #self.addLayout(layout_inner_coils, 1, 1, 1, 1)
-        self.addWidget(box_outer_coils, 1, 0, 1, 2)
-        self.addWidget(box_inner_coils, 1, 2, 1, 2)
+        self.addWidget(box_outer_coils, 1, 0, 1, 10)
+        self.addWidget(box_inner_coils, 1, 10, 1, 10)
         #self.addLayout(layout_buttons, 1, 2, 1, 1)
         
 
@@ -748,18 +750,27 @@ class Layout(QGridLayout):
         self.stop_button = QPushButton("Stop")
         self.levitate_button = QPushButton("Wingardium Leviosa")
         self.zero_button = QPushButton("Zero")
+        self.update_button = QPushButton("Update")
         self.start_button.clicked.connect(self.start_on_click)
         self.stop_button.clicked.connect(self.stop_on_click)
         self.levitate_button.clicked.connect(self.levitate_on_click)
         self.zero_button.clicked.connect(self.zero_on_click)
+        self.update_button.clicked.connect(self.update_on_click)
         
-        self.addWidget(self.start_button, 2, 0, 1, 1)
-        self.addWidget(self.stop_button, 2, 1, 1, 1)
-        self.addWidget(self.levitate_button, 2, 2, 1, 1)
-        self.addWidget(self.zero_button, 2, 3, 1, 1)
+        self.addWidget(self.start_button, 2, 0, 1, 4)
+        self.addWidget(self.stop_button, 2, 4, 1, 4)
+        self.addWidget(self.levitate_button, 2, 8, 1, 4)
+        self.addWidget(self.zero_button, 2, 12, 1, 4)
+        self.addWidget(self.update_button, 2, 16, 1, 4)
 
 
    
+        
+    def update_on_click(self):
+        self.pipe_update.send(True)
+        # Send a pipe signal to the main program
+        # Signal will tell the main program to prompt the PSU to get the currents in each channel
+        # This will then be printed where? On the plots? In a console?
         
     def levitate_on_click(self):
         
@@ -1013,6 +1024,7 @@ class MainWindow(QMainWindow):
                  pipe_gui_innerb,
                  pipe_gui_outera,
                  pipe_gui_outerb,
+                 pipe_update,
                  parent=None,
                  *args,
                  **kwargs):
@@ -1035,6 +1047,7 @@ class MainWindow(QMainWindow):
         self.pipe_gui_innerb = pipe_gui_innerb
         self.pipe_gui_outera = pipe_gui_outera
         self.pipe_gui_outerb = pipe_gui_outerb
+        self.pipe_update = pipe_update
         
         
         self.title = "Wingardium Leviosa"
@@ -1054,7 +1067,8 @@ class MainWindow(QMainWindow):
                              self.pipe_gui_innera,
                              self.pipe_gui_innerb,
                              self.pipe_gui_outera,
-                             self.pipe_gui_outerb)
+                             self.pipe_gui_outerb,
+                             self.pipe_update)
         widget = QWidget()
         widget.setLayout(grid_layout)
         self.setCentralWidget(widget)
@@ -1063,9 +1077,9 @@ class MainWindow(QMainWindow):
         
 
 #def start_gui(input_channelDict, output_channelDict, pipe_param, pipe_input, pipe_output, signal_start, pipe_signal):
-def start_gui(outer_channelDict, inner_channelDict, pipe_param, pipe_stop, pipe_gui_innera, pipe_gui_innerb, pipe_gui_outera, pipe_gui_outerb, ):
+def start_gui(outer_channelDict, inner_channelDict, pipe_param, pipe_stop, pipe_gui_innera, pipe_gui_innerb, pipe_gui_outera, pipe_gui_outerb, pipe_update, ):
     app = QApplication(sys.argv)
-    ex = MainWindow(outer_channelDict, inner_channelDict, pipe_param, pipe_stop, pipe_gui_innera, pipe_gui_innerb, pipe_gui_outera, pipe_gui_outerb, )
+    ex = MainWindow(outer_channelDict, inner_channelDict, pipe_param, pipe_stop, pipe_gui_innera, pipe_gui_innerb, pipe_gui_outera, pipe_gui_outerb, pipe_update, )
     #ex = MainWindow(input_channelDict, output_channelDict, pipe_param, pipe_input, pipe_output, signal_start, pipe_signal)
     sys.exit(app.exec_())
 
